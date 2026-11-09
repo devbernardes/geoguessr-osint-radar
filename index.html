@@ -4,29 +4,27 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#020617">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GeoOSINT Mobile Free</title>
+  <title>GeoOSINT v3.0</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Biblioteca gratuita sem API Key -->
   <script src="https://js.puter.com/v2/"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
-    #map { height: 280px; width: 100%; border-radius: 0.75rem; z-index: 10; }
+    #map { height: 290px; width: 100%; border-radius: 0.75rem; z-index: 10; }
     body { -webkit-tap-highlight-color: transparent; }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen p-3 font-sans pb-10">
 
   <div class="max-w-md mx-auto space-y-3">
-    <!-- Top Bar Compacta -->
+    <!-- Top Bar v3.0 -->
     <header class="bg-slate-900 p-3 rounded-xl border border-slate-800 flex items-center justify-between shadow">
       <div class="flex items-center gap-2">
         <span class="text-xl">🛰️</span>
-        <h1 class="text-base font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">GeoOSINT Mobile</h1>
+        <h1 class="text-base font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">GeoOSINT v3.0</h1>
       </div>
       <span class="text-[11px] bg-emerald-950 text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-800 font-semibold">
-        ⚡ 100% Grátis (Sem Key)
+        ⚡ Google Maps + Grátis
       </span>
     </header>
 
@@ -55,7 +53,7 @@
       </button>
     </div>
 
-    <!-- Mapa Mundi Interativo -->
+    <!-- Mapa Mundi Interativo (Google Maps Tiles - Sem API Key) -->
     <div class="bg-slate-900 border border-slate-800 p-1.5 rounded-xl shadow">
       <div id="map"></div>
     </div>
@@ -73,7 +71,7 @@
       <div class="flex justify-between items-center bg-slate-950 p-2.5 rounded-lg border border-slate-800 text-xs font-mono">
         <div><span class="text-slate-500">LAT:</span> <span id="resLat" class="text-cyan-400">-</span></div>
         <div><span class="text-slate-500">LNG:</span> <span id="resLng" class="text-cyan-400">-</span></div>
-        <a id="gmapsLink" href="#" target="_blank" class="text-emerald-400 underline font-sans font-semibold">Abrir Maps ↗</a>
+        <a id="gmapsLink" href="#" target="_blank" class="text-emerald-400 underline font-sans font-semibold">Abrir Street View ↗</a>
       </div>
 
       <div>
@@ -81,7 +79,6 @@
         <ul id="resClues" class="text-xs text-slate-300 space-y-1 list-disc list-inside"></ul>
       </div>
     </div>
-
   </div>
 
   <script>
@@ -89,9 +86,11 @@
     let map, marker;
 
     window.onload = () => {
-      map = L.map('map', { zoomControl: false }).setView([15, 0], 2);
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; CARTO'
+      map = L.map('map', { zoomControl: true }).setView([20, 0], 2);
+      // Mapa padrão Google Maps gratuito e sem marca d'água
+      L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+        maxZoom: 20,
+        attribution: '&copy; Google Maps'
       }).addTo(map);
     };
 
@@ -143,7 +142,7 @@
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, w, h);
           
-          currentDataUrl = canvas.toDataURL('image/jpeg', 0.82);
+          currentDataUrl = canvas.toDataURL('image/jpeg', 0.85);
           document.getElementById('previewImg').src = currentDataUrl;
           document.getElementById('previewContainer').classList.remove('hidden');
           analyzeImage();
@@ -158,33 +157,46 @@
 
       const btn = document.getElementById('analyzeBtn');
       btn.disabled = true;
-      btn.innerText = '⏳ Escaneando grátis...';
+      btn.innerText = '⏳ Calculando coordenadas...';
 
       const prompt = `Você é um especialista mundial em GeoGuessr e geolocalização OSINT.
-Analise esta imagem (ignore elementos de interface/HUD do jogo) examinando mão de direção, sol, postes, bollards, faixas da pista, placas, arquitetura, relevo, solo e vegetação.
-Retorne EXCLUSIVAMENTE um objeto JSON puro (sem crases markdown) neste formato exato:
+Analise esta imagem examinando placas, idioma, arquitetura, carros, mão de direção, postes, faixas da pista e vegetação.
+IMPORTANTE: Calcule a latitude (lat) e longitude (lng) numéricas reais aproximadas da região ou cidade identificada (NUNCA retorne 0 ou 0.0000).
+Retorne EXCLUSIVAMENTE um objeto JSON puro (sem crases markdown) seguindo esta estrutura:
 {
   "pais": "Nome do País em Português",
-  "regiao": "Estado, província ou cidade aproximada",
-  "lat": 0.0000,
-  "lng": 0.0000,
+  "regiao": "Cidade ou Estado estimado",
+  "lat": 40.4168,
+  "lng": -3.7038,
   "confianca": "Alta | Média | Baixa",
   "pistas": ["Pista 1 curta e direta", "Pista 2 curta e direta", "Pista 3 curta e direta"]
 }`;
 
       try {
-        // Usa o motor gratuito do Puter.js sem precisar de API Key
         const response = await puter.ai.chat(prompt, currentDataUrl, { model: 'gpt-4o-mini' });
         const rawText = (response?.message?.content || response.toString()).replace(/```json|```/g, '').trim();
         const result = JSON.parse(rawText);
+
+        let lat = parseFloat(result.lat);
+        let lng = parseFloat(result.lng);
+
+        // Fallback automático caso a IA retorne 0.0000
+        if (!lat || !lng || (Math.abs(lat) < 0.1 && Math.abs(lng) < 0.1)) {
+          const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(result.regiao + ', ' + result.pais)}`);
+          const geoData = await geoRes.json();
+          if (geoData && geoData.length > 0) {
+            lat = parseFloat(geoData[0].lat);
+            lng = parseFloat(geoData[0].lon);
+          }
+        }
 
         document.getElementById('resultCard').classList.remove('hidden');
         document.getElementById('resCountry').innerText = result.pais;
         document.getElementById('resRegion').innerText = result.regiao;
         document.getElementById('resConfidence').innerText = result.confianca;
-        document.getElementById('resLat').innerText = Number(result.lat).toFixed(4);
-        document.getElementById('resLng').innerText = Number(result.lng).toFixed(4);
-        document.getElementById('gmapsLink').href = `https://www.google.com/maps?q=${result.lat},${result.lng}`;
+        document.getElementById('resLat').innerText = lat.toFixed(4);
+        document.getElementById('resLng').innerText = lng.toFixed(4);
+        document.getElementById('gmapsLink').href = `https://www.google.com/maps?q=${lat},${lng}`;
 
         const cluesList = document.getElementById('resClues');
         cluesList.innerHTML = '';
@@ -195,9 +207,9 @@ Retorne EXCLUSIVAMENTE um objeto JSON puro (sem crases markdown) neste formato e
         });
 
         if (marker) map.removeLayer(marker);
-        marker = L.marker([result.lat, result.lng]).addTo(map)
+        marker = L.marker([lat, lng]).addTo(map)
           .bindPopup(`<b>${result.pais}</b><br>${result.regiao}`).openPopup();
-        map.flyTo([result.lat, result.lng], 5, { duration: 1.2 });
+        map.flyTo([lat, lng], 6, { duration: 1.3 });
 
       } catch (err) {
         alert('Erro ao analisar: ' + err.message);
